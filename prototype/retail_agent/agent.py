@@ -2,9 +2,11 @@
 
 Middleware order is outermost-first (first wraps all):
   1. ModelCallLimit  — per-request model-call budget (cost backstop, FR-1.7.4)
-  2. ModelRetry      — transient backoff on the agent's own model calls
-  3. ToolRetry       — transient backoff on tools (e.g. query_data / BigQuery blip)
-  4. HumanInTheLoop  — gate the destructive delete_reports tool
+  2. PII (email)     — redact emails in tool results and final output (R2)
+  3. PII (phone)     — redact phone numbers via regex (R2)
+  4. ModelRetry      — transient backoff on the agent's own model calls
+  5. ToolRetry       — transient backoff on tools (e.g. query_data / BigQuery blip)
+  6. HumanInTheLoop  — gate the destructive delete_reports tool
 
 The bounded SQL repair loop is NOT here — it lives inside the analysis subgraph
 (see :mod:`subgraph`). Middleware enforces cross-cutting policy; the subgraph owns
@@ -22,6 +24,11 @@ from .tools import build_tools
 
 log = logging.getLogger("retail_agent.agent")
 
+# Phone numbers aren't a built-in PII type; this regex matches common formats
+# (optional country code, separators) while staying clear of plain integers and
+# decimal money amounts that appear in analytics output.
+PHONE_REGEX = r"\b(?:\+?\d{1,3}[ .\-]?)?\(?\d{3}\)?[ .\-]\d{3}[ .\-]\d{4}\b"
+
 
 def build_agent(settings: Settings, thread_id: str):
     """Construct the agent and its runtime. Returns ``(agent, runtime)``."""
@@ -30,6 +37,7 @@ def build_agent(settings: Settings, thread_id: str):
         HumanInTheLoopMiddleware,
         ModelCallLimitMiddleware,
         ModelRetryMiddleware,
+        PIIMiddleware,
         ToolRetryMiddleware,
     )
     from langgraph.checkpoint.sqlite import SqliteSaver
@@ -42,6 +50,17 @@ def build_agent(settings: Settings, thread_id: str):
 
     middleware = [
         ModelCallLimitMiddleware(run_limit=settings.model_run_limit),
+        # PII guard (R2): redact emails/phones in tool results AND final output,
+        # so raw customer contact data never reaches the model or the user even
+        # if a generated query selects it.
+        PIIMiddleware(
+            "email", strategy="redact",
+            apply_to_input=True, apply_to_tool_results=True, apply_to_output=True,
+        ),
+        PIIMiddleware(
+            "phone", strategy="redact", detector=PHONE_REGEX,
+            apply_to_input=True, apply_to_tool_results=True, apply_to_output=True,
+        ),
         ModelRetryMiddleware(max_retries=2),
         ToolRetryMiddleware(max_retries=2, on_failure="return_message"),
         HumanInTheLoopMiddleware(
