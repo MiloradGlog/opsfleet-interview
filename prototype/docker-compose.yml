@@ -1,0 +1,23 @@
+# Convenience wrapper for running the agent in Docker.
+#
+#   GOOGLE_API_KEY=... docker compose run --rm agent
+#
+# - GOOGLE_API_KEY is read from your shell; GOOGLE_CLOUD_PROJECT + model settings
+#   come from .env (see .env.example).
+# - Your local Application Default Credentials are mounted read-only so the
+#   container can query BigQuery as you (run `gcloud auth application-default login`
+#   on the host first).
+# - ./data is mounted so saved reports, the audit log, and checkpoints persist
+#   across container runs.
+services:
+  agent:
+    build: .
+    image: retail-data-agent
+    env_file: .env
+    environment:
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+    volumes:
+      - ~/.config/gcloud:/root/.config/gcloud:ro
+      - ./data:/app/data
+    stdin_open: true
+    tty: true
