@@ -21,7 +21,7 @@ It also realizes **R1 — Hybrid Intelligence** (the Golden Bucket) as core, sin
 
 | HLD (production) | Prototype |
 |---|---|
-| Vertex AI (Gemini, IAM/ADC) | **Google AI Studio API** (`GOOGLE_API_KEY`) via `langchain-google-genai` |
+| Vertex AI (Gemini, IAM/ADC) | **Google AI Studio API** (`GOOGLE_API_KEY`) via `langchain-google-genai` 4.x — chat `gemini-3.5-flash`, embeddings `gemini-embedding-001` |
 | Cloud SQL Postgres + pgvector | **SQLite** (operational state) + **in-process numpy cosine** (Trio vectors) |
 | PostgresSaver / PostgresStore | **SqliteSaver** checkpointer (durable interrupts); no long-term store |
 | Cloud Run, Identity Platform, admin plane, Cloud Scheduler jobs | **omitted** |
@@ -48,7 +48,7 @@ flowchart TB
     bq[("BigQuery thelook_ecommerce\nREAD-ONLY — BigQueryRunner")]
     sqlite[("SQLite\nsaved_reports · audit_log")]
     ckpt[("SqliteSaver\ncheckpointer — durable interrupts")]
-    gem["Gemini (Google AI Studio)\ngemini-2.5-flash + text-embedding-004"]
+    gem["Gemini (Google AI Studio)\ngemini-3.5-flash + gemini-embedding-001"]
 
     cli --> agent
     agent --> mw --> tools
@@ -182,7 +182,7 @@ sequenceDiagram
 ## 6. Golden Bucket — Hybrid Intelligence (R1)
 
 - ~8 seed Trios in `data/golden_trios.json`, authored to cover the brief's Expected Agent Capabilities: top customers / total spend, product performance, monthly & up-to-date revenue, regional/store comparison, and a schema-style example.
-- On first run, each Trio question is embedded with `text-embedding-004` and cached to `data/embeddings_cache.json` (avoids re-embedding every run and conserves the free-tier quota).
+- On first run, each Trio question is embedded with `gemini-embedding-001` (stable GA text embedder; `gemini-embedding-2` is the newer upgrade path) and cached to `data/embeddings_cache.json` (avoids re-embedding every run and conserves the free-tier quota). The cache stores the model id so a model change forces a clean re-embed (the two embedding spaces are incompatible).
 - `retrieve_trios` embeds the live question, computes **cosine similarity** (numpy) against cached Trio vectors, returns top-k (k=3). These become few-shot exemplars in the `generate_sql` prompt, steering both SQL structure and report style.
 - Structurally the first subgraph node → retrieval cannot be skipped (closes the "agent skips retrieval → quality collapse" failure mode).
 
@@ -252,8 +252,8 @@ agent> Deleted 1 report. (0 were already gone.)
 ```
 GOOGLE_API_KEY=            # Google AI Studio (Gemini chat + embeddings)
 GOOGLE_CLOUD_PROJECT=      # billable GCP project for BigQuery compute
-GEMINI_MODEL=gemini-2.5-flash
-EMBED_MODEL=models/text-embedding-004
+GEMINI_MODEL=gemini-3.5-flash
+EMBED_MODEL=gemini-embedding-001
 AGENT_USER_ID=manager_a
 MAX_SQL_ATTEMPTS=3
 MAX_RESULT_ROWS=1000
@@ -263,7 +263,7 @@ MAX_RESULT_ROWS=1000
 ```
 # mandated by user
 langgraph>=0.2.0
-langchain-google-genai>=1.0.0
+langchain-google-genai>=1.0.0    # resolves to 4.x — required for gemini-3.5 + consolidated google-genai SDK
 google-cloud-bigquery>=3.13.0
 pandas>=2.0.0
 python-dotenv>=1.0.0
