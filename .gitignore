@@ -15,6 +15,7 @@ service-account*.json
 prototype/data/*.sqlite
 prototype/data/checkpoints.sqlite
 prototype/data/embeddings_cache.json
+prototype/data/agent.log
 
 # OS / editor
 .DS_Store

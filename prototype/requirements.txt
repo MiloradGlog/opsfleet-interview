@@ -1,0 +1,17 @@
+# --- Mandated dependency floor (provided with the assignment) ---
+langgraph>=0.2.0
+langchain-google-genai>=1.0.0      # resolves to 4.x: gemini-3.5 + consolidated google-genai SDK
+google-cloud-bigquery>=3.13.0
+pandas>=2.0.0
+python-dotenv>=1.0.0
+langchain-core>=0.3.0
+db-dtypes==1.2.0
+
+# --- Added for this build ---
+langchain>=1.0                     # create_agent + middleware (HITL, ModelCallLimit, ModelRetry, ToolRetry)
+langgraph-checkpoint-sqlite>=2.0   # SqliteSaver — durable interrupts
+sqlglot>=23.0                      # read-only SELECT / allow-list guard
+numpy>=1.26                        # in-process cosine over Trio embeddings
+
+# --- Dev ---
+pytest>=8.0

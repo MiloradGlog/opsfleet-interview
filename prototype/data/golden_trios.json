@@ -1,0 +1,58 @@
+[
+  {
+    "id": "trio-top-customers-spend",
+    "tags": ["customers", "revenue", "ranking"],
+    "question": "Who are our top customers by total spend?",
+    "sql": "SELECT u.id AS user_id, u.first_name, u.last_name, ROUND(SUM(oi.sale_price), 2) AS total_spend, COUNT(DISTINCT oi.order_id) AS orders FROM `bigquery-public-data.thelook_ecommerce.order_items` oi JOIN `bigquery-public-data.thelook_ecommerce.users` u ON oi.user_id = u.id WHERE oi.status NOT IN ('Cancelled', 'Returned') GROUP BY user_id, u.first_name, u.last_name ORDER BY total_spend DESC LIMIT 10",
+    "report": "The top customers are ranked by lifetime spend across all non-cancelled, non-returned items. We report each customer's total spend and order count so you can see whether high spend comes from many orders or a few large ones. Concentration among the top handful of customers is a signal for targeted retention outreach."
+  },
+  {
+    "id": "trio-top-products-revenue",
+    "tags": ["products", "revenue", "ranking"],
+    "question": "What are the best selling products by revenue?",
+    "sql": "SELECT p.name AS product, p.brand, p.category, ROUND(SUM(oi.sale_price), 2) AS revenue, COUNT(*) AS units_sold FROM `bigquery-public-data.thelook_ecommerce.order_items` oi JOIN `bigquery-public-data.thelook_ecommerce.products` p ON oi.product_id = p.id WHERE oi.status NOT IN ('Cancelled', 'Returned') GROUP BY product, p.brand, p.category ORDER BY revenue DESC LIMIT 10",
+    "report": "Products are ranked by total revenue (sum of sale price for completed items). We include units sold and category so you can distinguish high-revenue products driven by volume from those driven by price. Use this to prioritize inventory and merchandising for the strongest performers."
+  },
+  {
+    "id": "trio-monthly-revenue",
+    "tags": ["revenue", "time-series", "trend"],
+    "question": "What is our monthly revenue over the last 12 months?",
+    "sql": "SELECT FORMAT_TIMESTAMP('%Y-%m', oi.created_at) AS month, ROUND(SUM(oi.sale_price), 2) AS revenue, COUNT(DISTINCT oi.order_id) AS orders FROM `bigquery-public-data.thelook_ecommerce.order_items` oi WHERE oi.status NOT IN ('Cancelled', 'Returned') AND oi.created_at >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 365 DAY) GROUP BY month ORDER BY month",
+    "report": "Monthly revenue is summed from completed item sales over the trailing twelve months, alongside order counts. Reading the two together separates growth from price effects: rising revenue with flat orders points to higher basket value. Watch the most recent month for momentum and seasonality."
+  },
+  {
+    "id": "trio-revenue-by-category",
+    "tags": ["products", "category", "revenue"],
+    "question": "How does revenue break down by product category?",
+    "sql": "SELECT p.category, ROUND(SUM(oi.sale_price), 2) AS revenue, COUNT(*) AS units_sold, ROUND(AVG(oi.sale_price), 2) AS avg_price FROM `bigquery-public-data.thelook_ecommerce.order_items` oi JOIN `bigquery-public-data.thelook_ecommerce.products` p ON oi.product_id = p.id WHERE oi.status NOT IN ('Cancelled', 'Returned') GROUP BY p.category ORDER BY revenue DESC LIMIT 25",
+    "report": "Revenue, units, and average selling price are aggregated per category. The mix tells you where demand concentrates and how pricing varies: a category with high revenue but low average price is a volume play, while a high average price indicates premium positioning. Useful for assortment and promotion planning."
+  },
+  {
+    "id": "trio-category-compare",
+    "tags": ["category", "comparison", "revenue"],
+    "question": "Compare the performance of two product categories.",
+    "sql": "SELECT p.category, ROUND(SUM(oi.sale_price), 2) AS revenue, COUNT(*) AS units_sold, COUNT(DISTINCT oi.user_id) AS customers FROM `bigquery-public-data.thelook_ecommerce.order_items` oi JOIN `bigquery-public-data.thelook_ecommerce.products` p ON oi.product_id = p.id WHERE oi.status NOT IN ('Cancelled', 'Returned') AND p.category IN ('Jeans', 'Sweaters') GROUP BY p.category ORDER BY revenue DESC",
+    "report": "For a head-to-head comparison we put the two categories side by side on revenue, units sold, and distinct customers. Comparing customers against units reveals breadth versus repeat purchasing. Substitute the category names in the filter to compare any two segments the manager cares about."
+  },
+  {
+    "id": "trio-customers-by-region",
+    "tags": ["customers", "geography"],
+    "question": "How many customers do we have by country?",
+    "sql": "SELECT u.country, COUNT(*) AS customers FROM `bigquery-public-data.thelook_ecommerce.users` u GROUP BY u.country ORDER BY customers DESC LIMIT 25",
+    "report": "Customers are counted per country to show where the base is concentrated. Large markets anchor revenue while smaller ones may be growth opportunities. Pair this with revenue-by-region when prioritizing regional initiatives."
+  },
+  {
+    "id": "trio-aov-trend",
+    "tags": ["orders", "revenue", "time-series"],
+    "question": "What is the average order value trend by month?",
+    "sql": "WITH order_totals AS (SELECT oi.order_id, FORMAT_TIMESTAMP('%Y-%m', MIN(oi.created_at)) AS month, SUM(oi.sale_price) AS order_value FROM `bigquery-public-data.thelook_ecommerce.order_items` oi WHERE oi.status NOT IN ('Cancelled', 'Returned') GROUP BY oi.order_id) SELECT month, ROUND(AVG(order_value), 2) AS avg_order_value, COUNT(*) AS orders FROM order_totals GROUP BY month ORDER BY month",
+    "report": "Average order value is computed by first totaling each order, then averaging across orders within the month. Tracking it over time shows whether baskets are growing. A rising average with steady order counts signals successful upsell or pricing; a falling average warrants a look at discounting."
+  },
+  {
+    "id": "trio-top-brands",
+    "tags": ["products", "brand", "revenue"],
+    "question": "Which brands generate the most revenue?",
+    "sql": "SELECT p.brand, ROUND(SUM(oi.sale_price), 2) AS revenue, COUNT(*) AS units_sold FROM `bigquery-public-data.thelook_ecommerce.order_items` oi JOIN `bigquery-public-data.thelook_ecommerce.products` p ON oi.product_id = p.id WHERE oi.status NOT IN ('Cancelled', 'Returned') AND p.brand IS NOT NULL GROUP BY p.brand ORDER BY revenue DESC LIMIT 15",
+    "report": "Brands are ranked by total revenue with units sold for context. The leaders are your negotiating and shelf-space priorities; a long tail of small brands may be candidates for rationalization. Combine with margin (retail price minus cost) when making assortment decisions."
+  }
+]
