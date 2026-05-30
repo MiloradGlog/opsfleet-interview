@@ -40,5 +40,5 @@ This complements the automated layers: 94 offline unit/integration tests (81% co
 
 ## Notes / limitations (by design)
 
-- PII masking is intentionally out of scope for this prototype (documented in the README); customer names appear in "top customers" output. Re-enabling is a one-line `PIIMiddleware` addition.
+- PII masking (R2) is implemented for emails and phone numbers via `PIIMiddleware`. Customer names still appear (the brief targets phones and emails, not names). A live check confirmed that asking for customer emails returns "Email: *Redacted*" with no raw address.
 - Free-tier Gemini rate limits can occasionally surface transient 429s; these are absorbed by `ModelRetryMiddleware` and were not observed to affect any scenario in this run.

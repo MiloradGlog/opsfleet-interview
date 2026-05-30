@@ -181,7 +181,7 @@ sequenceDiagram
 - `AGENT_USER_ID` is a CLI flag/env so ownership scoping is demonstrable (`manager_a` cannot delete `manager_b`'s reports).
 - Durable interrupt: state is checkpointed by `SqliteSaver`, so the pause survives even a process restart.
 
-*PII masking (R2) is intentionally out of scope.* The add-back is a single built-in-middleware line rather than a custom node: `PIIMiddleware("email", strategy="redact", apply_to_output=True)` plus a custom regex detector for `phone` (streamed-output redaction needs `langchain>=1.3.2`). The spec notes this exact one-liner where it would slot into the middleware stack.
+*PII masking (R2) — implemented after initial approval.* Added with the built-in `PIIMiddleware`: one instance for `email` (built-in detector) and one for `phone` (regex detector), both with `apply_to_input`, `apply_to_tool_results`, and `apply_to_output` enabled, so contact data is redacted before the model sees tool output and again on the way to the user. Sits second in the middleware stack (after the budget gate). Verified by offline tests and a live check (asking for customer emails returns `*Redacted*`).
 
 ---
 
@@ -313,7 +313,7 @@ These mock Gemini and BigQuery so the suite runs offline and free.
 
 ## 13. Out of Scope (explicit)
 
-PII masking (R2), persona governance (R8), user preferences, feedback/learning loop & analyst curation (R4), admin plane, pre-deployment evals (R6), Observability dashboards/LangSmith (R7), authentication/SSO, GDPR cascade, Cloud infra, Docker. Each maps to a clearly-labeled section of the HLD and is called out in the README as "designed in HLD, deferred in prototype."
+Persona governance (R8), user preferences, feedback/learning loop & analyst curation (R4), admin plane, pre-deployment evals (R6), Observability dashboards/LangSmith (R7), authentication/SSO, GDPR cascade, and Cloud infra. Each maps to a clearly-labeled section of the HLD and is called out in the README as "designed in HLD, deferred in prototype." (PII masking, originally listed here, was implemented — see §5. Docker packaging was also added.)
 
 ---
 
