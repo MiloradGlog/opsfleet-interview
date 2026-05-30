@@ -53,6 +53,16 @@ def test_embeddings_are_cached(tmp_path):
     assert gb2._matrix is not None and gb2._matrix.shape[0] == len(TRIOS)
 
 
+def test_empty_bucket_returns_nothing(tmp_path):
+    gb = GoldenBucket([], FakeEmbeddings().embed_documents, "fake", cache_path=tmp_path / "e.json")
+    assert gb.retrieve("anything", k=3) == []
+
+
+def test_k_larger_than_corpus_returns_all(tmp_path):
+    gb = _bucket(tmp_path)
+    assert len(gb.retrieve("revenue", k=99)) == len(TRIOS)
+
+
 def test_stale_cache_is_ignored_on_model_change(tmp_path):
     _bucket(tmp_path).retrieve("customers", k=1)
     # different model id -> cache key mismatch -> rebuild rather than reuse

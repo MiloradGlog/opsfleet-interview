@@ -100,3 +100,45 @@ def test_reject_keeps_report_and_writes_no_audit(env):
     assert len(rt.storage.list_reports("manager_a")) == 1
     n = rt.storage.conn.execute("SELECT COUNT(*) n FROM audit_log").fetchone()["n"]
     assert n == 0
+
+
+class MultiDeleteModel(BaseChatModel):
+    """Deletes two reports with the count-bound token."""
+
+    @property
+    def _llm_type(self) -> str:
+        return "scripted-multi"
+
+    def bind_tools(self, tools, **kwargs):  # noqa: ANN001
+        return self
+
+    def _generate(self, messages, stop=None, run_manager=None, **kwargs):
+        if any(getattr(m, "type", None) == "tool" for m in messages):
+            return ChatResult(generations=[ChatGeneration(message=AIMessage(content="Done."))])
+        tc = [{"name": "delete_reports",
+               "args": {"report_ids": [1, 2], "confirmation_token": "CONFIRM-DELETE-2"},
+               "id": "c1"}]
+        return ChatResult(generations=[ChatGeneration(message=AIMessage(content="", tool_calls=tc))])
+
+
+def test_multi_report_delete_approves_all():
+    tmp = pathlib.Path(tempfile.mkdtemp())
+    settings = Settings(
+        google_api_key=None, gcp_project=None, gemini_model="m", embed_model="e",
+        user_id="manager_a", hmac_secret="x", max_sql_attempts=3, max_result_rows=1000,
+        preview_rows=50, model_run_limit=8, data_dir=tmp,
+    )
+    rt = AgentRuntime(settings, "t1")
+    rt.storage.save_report("manager_a", "Acme 1", "acme")
+    rt.storage.save_report("manager_a", "Acme 2", "acme")
+    agent = create_agent(
+        model=MultiDeleteModel(), tools=build_tools(rt),
+        middleware=[HumanInTheLoopMiddleware(
+            interrupt_on={"delete_reports": {"allowed_decisions": ["approve", "reject"]}})],
+        checkpointer=InMemorySaver(),
+    )
+    cfg = {"configurable": {"thread_id": "t1"}}
+    agent.invoke({"messages": [{"role": "user", "content": "delete all acme"}]}, config=cfg)
+    agent.invoke(Command(resume={"decisions": [{"type": "approve"}]}), config=cfg)
+    assert rt.storage.list_reports("manager_a") == []
+    rt.close()

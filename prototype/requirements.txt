@@ -15,3 +15,4 @@ numpy>=1.26                        # in-process cosine over Trio embeddings
 
 # --- Dev ---
 pytest>=8.0
+pytest-cov>=5.0

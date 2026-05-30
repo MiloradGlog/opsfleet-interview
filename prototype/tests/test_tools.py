@@ -70,6 +70,23 @@ def test_delete_rejects_wrong_token(runtime):
     assert "Acme" in tools["list_reports"].invoke({})  # still there
 
 
+def test_query_data_runs_subgraph_and_formats(runtime):
+    import types
+    runtime._subgraph = types.SimpleNamespace(invoke=lambda state: {
+        "status": "ok", "rows": [{"a": 1}], "columns": ["a"], "row_count": 1,
+        "trio_ids": ["t1"], "sql": "SELECT a FROM t", "truncated": False,
+    })
+    tools = _by_name(build_tools(runtime))
+    out = tools["query_data"].invoke({"question": "anything"})
+    assert "SELECT a FROM t" in out and "t1" in out
+
+
+def test_preview_no_match_message(runtime):
+    tools = _by_name(build_tools(runtime))
+    out = tools["preview_delete_reports"].invoke({"criteria": "nonexistent"})
+    assert "Nothing to delete" in out
+
+
 def test_delete_writes_audit_row(runtime):
     tools = _by_name(build_tools(runtime))
     tools["save_report"].invoke({"title": "Acme", "body": "acme"})

@@ -91,3 +91,48 @@ def test_transient_error_is_reraised_not_repaired():
     graph = build_analysis_subgraph(_deps(_sequenced([VALID_SQL]), run_query))
     with pytest.raises(Exception):
         graph.invoke(initial_state("q"))
+
+
+def test_two_repairs_then_success_within_budget():
+    df = pd.DataFrame([{"x": 1}])
+    graph = build_analysis_subgraph(
+        _deps(_sequenced([INVALID_SQL, INVALID_SQL, VALID_SQL]), lambda sql: df, max_attempts=3)
+    )
+    out = graph.invoke(initial_state("q"))
+    assert out["status"] == "ok"
+    assert out["attempts"] == 3
+    assert len([e for e in out["errors"] if "validation" in e]) == 2
+
+
+def test_clean_sql_strips_markdown_fences():
+    from retail_agent.subgraph import _clean_sql
+    assert _clean_sql("```sql\nSELECT 1\n```") == "SELECT 1"
+    assert _clean_sql("```\nSELECT 2\n```") == "SELECT 2"
+    assert _clean_sql("sql\nSELECT 3") == "SELECT 3"
+    assert _clean_sql("  SELECT 4  ") == "SELECT 4"
+
+
+def test_preview_rows_truncation_reports_full_count():
+    df = pd.DataFrame([{"n": i} for i in range(5)])
+    deps = AnalysisDeps(
+        retrieve=_retrieve, complete=_sequenced([VALID_SQL]), run_query=lambda sql: df,
+        schema="(s)", max_attempts=3, max_result_rows=1000, preview_rows=2,
+    )
+    out = build_analysis_subgraph(deps).invoke(initial_state("q"))
+    assert out["status"] == "ok"
+    assert out["row_count"] == 5          # full count preserved
+    assert len(out["rows"]) == 2          # preview capped
+    assert out["truncated"] is True
+
+
+def test_empty_then_repair_finds_rows():
+    calls = {"n": 0}
+
+    def run_query(sql):
+        calls["n"] += 1
+        return pd.DataFrame() if calls["n"] == 1 else pd.DataFrame([{"x": 1}])
+
+    graph = build_analysis_subgraph(_deps(_sequenced([VALID_SQL, VALID_SQL]), run_query))
+    out = graph.invoke(initial_state("q"))
+    assert out["status"] == "ok"
+    assert out["empty_retried"] is True

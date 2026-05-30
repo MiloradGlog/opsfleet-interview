@@ -57,3 +57,38 @@ def test_audit_is_idempotent_on_double_resume(store):
 def test_op_id_is_order_independent(store):
     assert store.op_id("u", "t", [3, 1, 2]) == store.op_id("u", "t", [1, 2, 3])
     assert store.op_id("u", "t", [1, 2]) != store.op_id("u", "t", [1, 3])
+
+
+def test_criteria_matches_title_or_body_case_insensitive(store):
+    store.save_report("manager_a", "ACME Quarterly", "revenue summary")  # match in title
+    store.save_report("manager_a", "Monthly recap", "notes about acme corp")  # match in body
+    store.save_report("manager_a", "Widgets", "nothing relevant")
+    prev = store.preview_deletable("manager_a", "AcMe")
+    assert prev["count"] == 2
+
+
+def test_empty_criteria_matches_all_owned(store):
+    store.save_report("manager_a", "A", "x")
+    store.save_report("manager_a", "B", "y")
+    store.save_report("manager_b", "C", "z")
+    prev = store.preview_deletable("manager_a", "")
+    assert prev["count"] == 2  # both of manager_a's, none of manager_b's
+
+
+def test_mixed_ownership_delete_only_removes_owned(store):
+    a = store.save_report("manager_a", "mine", "x")
+    b = store.save_report("manager_b", "theirs", "y")
+    counts = store.soft_delete("manager_a", [a, b])
+    assert counts["deleted"] == 1            # only the owned row
+    assert len(store.list_reports("manager_b")) == 1  # other user's intact
+
+
+def test_audit_counts_are_persisted_as_json(store):
+    import json
+    rid = store.save_report("manager_a", "X", "x")
+    counts = store.soft_delete("manager_a", [rid])
+    op = store.op_id("manager_a", "th", [rid])
+    store.write_audit(op, "manager_a", "delete_reports", [rid], counts)
+    row = store.conn.execute("SELECT target_ids, counts FROM audit_log WHERE op_id=?", (op,)).fetchone()
+    assert json.loads(row["target_ids"]) == [rid]
+    assert json.loads(row["counts"]) == counts

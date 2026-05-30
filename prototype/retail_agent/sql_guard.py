@@ -68,9 +68,11 @@ def validate(sql: str, allowed_tables: tuple[str, ...] = ALLOWED_TABLES, max_row
                 f"Statement type '{type(node).__name__}' is not permitted (read-only)."
             )
 
-    # 3) Every referenced table must be in the allow-list.
+    # 3) Every referenced table must be in the allow-list. Names introduced by
+    #    CTEs (WITH ... AS) are local aliases, not source tables, so exclude them.
     allowed = {t.lower() for t in allowed_tables}
-    referenced = {t.name.lower() for t in stmt.find_all(exp.Table) if t.name}
+    cte_names = {c.alias_or_name.lower() for c in stmt.find_all(exp.CTE) if c.alias_or_name}
+    referenced = {t.name.lower() for t in stmt.find_all(exp.Table) if t.name} - cte_names
     if not referenced:
         raise SQLGuardError("Query references no known table.")
     illegal = referenced - allowed
@@ -86,14 +88,15 @@ def validate(sql: str, allowed_tables: tuple[str, ...] = ALLOWED_TABLES, max_row
 
 def _apply_limit(stmt: exp.Expression, max_rows: int) -> str:
     """Ensure the outer query has a LIMIT no greater than ``max_rows``."""
-    if isinstance(stmt, exp.Select):
-        limit = stmt.args.get("limit")
-        existing = _limit_value(limit)
+    # Select and Union both support .limit(); .limit() replaces any existing one,
+    # so an oversized LIMIT is capped rather than left nested.
+    if isinstance(stmt, (exp.Select, exp.Union)):
+        existing = _limit_value(stmt.args.get("limit"))
         if existing is None or existing > max_rows:
             stmt = stmt.limit(max_rows)
         return stmt.sql(dialect=_DIALECT)
 
-    # UNION / Subquery: wrap so the cap applies to the whole result set.
+    # Bare subquery (rare): wrap so the cap applies to the whole result set.
     wrapped = sqlglot.parse_one(
         f"SELECT * FROM ({stmt.sql(dialect=_DIALECT)}) AS _capped LIMIT {max_rows}",
         read=_DIALECT,

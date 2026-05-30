@@ -64,3 +64,65 @@ def test_allows_join_across_allowed_tables():
     )
     out = sql_guard.validate(sql, max_rows=1000)
     assert "order_items" in out.lower() and "products" in out.lower()
+
+
+# --- advanced / adversarial cases ------------------------------------------
+
+def test_allows_cte_referencing_allowed_table():
+    sql = (
+        f"WITH totals AS (SELECT order_id, SUM(sale_price) v FROM `{DS}.order_items` GROUP BY order_id) "
+        f"SELECT AVG(v) avg_v FROM totals LIMIT 10"
+    )
+    out = sql_guard.validate(sql, max_rows=1000)
+    assert "totals" in out.lower()  # CTE name preserved, not rejected
+
+
+def test_cte_over_disallowed_table_is_rejected():
+    sql = f"WITH x AS (SELECT * FROM `{DS}.distribution_centers`) SELECT * FROM x LIMIT 5"
+    with pytest.raises(SQLGuardError):
+        sql_guard.validate(sql, max_rows=1000)
+
+
+def test_cte_shadowing_a_fake_base_table_is_rejected():
+    # 'users' here is a CTE over no real table -> no allowed source -> rejected
+    with pytest.raises(SQLGuardError):
+        sql_guard.validate("WITH users AS (SELECT 1 x) SELECT * FROM users LIMIT 5", max_rows=10)
+
+
+def test_allows_union_of_allowed_tables_and_caps_limit():
+    sql = (
+        f"SELECT id FROM `{DS}.orders` UNION ALL SELECT id FROM `{DS}.order_items` LIMIT 5000"
+    )
+    out = sql_guard.validate(sql, max_rows=1000)
+    assert "1000" in out and "5000" not in out
+
+
+def test_subquery_in_from_over_allowed_table():
+    sql = f"SELECT c FROM (SELECT category c FROM `{DS}.products`) AS s LIMIT 3"
+    out = sql_guard.validate(sql, max_rows=1000)
+    assert "products" in out.lower()
+
+
+def test_rejects_information_schema():
+    sql = f"SELECT table_name FROM `{DS}`.INFORMATION_SCHEMA.TABLES LIMIT 10"
+    with pytest.raises(SQLGuardError):
+        sql_guard.validate(sql, max_rows=1000)
+
+
+def test_select_star_allowed_but_limited():
+    out = sql_guard.validate(f"SELECT * FROM `{DS}.products`", max_rows=50)
+    assert "limit 50" in out.lower().replace("\n", " ")
+
+
+def test_disallowed_table_hidden_in_join_is_rejected():
+    sql = (
+        f"SELECT 1 FROM `{DS}.orders` o "
+        f"JOIN `{DS}.inventory_items` i ON i.id = o.order_id LIMIT 5"
+    )
+    with pytest.raises(SQLGuardError):
+        sql_guard.validate(sql, max_rows=1000)
+
+
+def test_trailing_semicolon_is_tolerated():
+    out = sql_guard.validate(f"SELECT id FROM `{DS}.orders` LIMIT 5;", max_rows=1000)
+    assert "orders" in out.lower()
