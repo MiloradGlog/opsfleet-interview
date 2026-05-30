@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Environment / secrets
+.env
+*.key
+service-account*.json
+
+# Prototype runtime state (generated)
+prototype/data/*.sqlite
+prototype/data/checkpoints.sqlite
+prototype/data/embeddings_cache.json
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
