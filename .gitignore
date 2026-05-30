@@ -11,9 +11,8 @@ env/
 *.key
 service-account*.json
 
-# Prototype runtime state (generated)
-prototype/data/*.sqlite
-prototype/data/checkpoints.sqlite
+# Prototype runtime state (generated) — .sqlite plus -shm/-wal WAL sidecars
+prototype/data/*.sqlite*
 prototype/data/embeddings_cache.json
 prototype/data/agent.log
 
