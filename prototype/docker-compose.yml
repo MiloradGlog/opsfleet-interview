@@ -1,6 +1,5 @@
-# Compose project name is fixed to p2gamma so this build coexists with sibling
-# builds: `docker compose -p p2gamma up`. Host Postgres port is 5435.
-name: p2gamma
+# Two-service stack: Postgres (pgvector) for state + retrieval, and the agent CLI.
+name: retail-agent
 
 services:
   postgres:
@@ -10,7 +9,7 @@ services:
       POSTGRES_PASSWORD: retail
       POSTGRES_DB: retail
     ports:
-      - "5435:5432"
+      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:

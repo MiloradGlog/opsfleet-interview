@@ -8,15 +8,7 @@
 
 # AI Data Analysis Chat Assistant — High-Level Design
 
-## 1. Overview & Scope
-
-This document is the production High-Level Design for the AI Data Analysis Chat Assistant. It is a derivative of, and must remain reconcilable to, the source-of-truth chain:
-
-```
-00_Brief.md  →  01_Project_Vision.md  →  02_Requirements.md  →  03_Use_Case_Diagrams.md  →  04_System_Design.md (this)
-```
-
-The brief outranks every other document. Where this design names a concrete technology, it is either (a) mandated by the brief (BigQuery, Gemini-preferred, LangGraph/LangChain V1), or (b) a deliberate engineering choice justified against a requirement and recorded with a scale-trigger for revisiting (see §20).
+## 1. Overview
 
 **What the system does.** Non-technical retail managers ask questions in natural language. The system retrieves analyst-curated examples ("Golden Trios": Question → SQL → Report), generates and runs SQL against a read-only BigQuery dataset, redacts PII, and synthesizes a business-language report in the user's preferred format and the configured agent persona. It supports a personal saved-reports library with human-gated deletion, a continuous-improvement loop driven by analyst curation, configurable persona, full observability, pre-deployment evaluation, and GDPR data-subject deletion.
 
@@ -185,7 +177,7 @@ flowchart TB
     start --> rt --> gen --> val
     val -->|valid| exe
     val -->|invalid| rep
-    exe -->|error & attempts<N & budget| rep
+    exe -->|"error & attempts &lt; N & budget"| rep
     exe -->|empty & not retried| emp
     exe -->|error & exhausted| fail
     exe -->|success| redact --> ok
@@ -643,5 +635,3 @@ flowchart TB
 | Retrieval pattern-distillation | Embed full standalone question | Specific values drowning out analytical pattern in retrieval |
 
 ---
-
-*End of High-Level Design.*

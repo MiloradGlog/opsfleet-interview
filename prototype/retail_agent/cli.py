@@ -44,7 +44,6 @@ def _credential_banner(settings) -> str:
         f"  Gemini API key (GOOGLE_API_KEY)         : {mark(gemini_ok)}\n"
         f"  BigQuery SA key (GOOGLE_APPLICATION_CREDENTIALS): {mark(bq_ok)} "
         f"({settings.google_app_creds or 'unset'})\n"
-        f"  Billing project (GOOGLE_CLOUD_PROJECT)  : {settings.gcp_project or 'unset'}\n"
         f"  Postgres (DATABASE_URL)                 : {settings.database_url}\n"
         f"  Model: {settings.gemini_model} | Embeddings: {settings.embed_model} "
         f"| MAX_SQL_ATTEMPTS={settings.max_sql_attempts}\n"
