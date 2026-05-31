@@ -42,7 +42,7 @@ flowchart TB
         sm["Secret Manager"]
         mon["Cloud Logging + Monitoring"]
 
-        vertex["Vertex AI\n(Gemini 3.5 Flash + embedding-001)\nIAM-authenticated, in-boundary"]
+        vertex["Vertex AI\nIAM-authenticated, in-boundary"]
         bq[("BigQuery\nthelook_ecommerce (read-only)")]
     end
 

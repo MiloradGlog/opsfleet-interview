@@ -12,9 +12,21 @@ a *semantic* SQL error (-> regenerate the query) apart from a *transient* failur
 from __future__ import annotations
 
 import logging
+import warnings
 from typing import Any, Dict, List, Optional
 
 log = logging.getLogger("retail_agent.bigquery")
+
+# We intentionally don't install google-cloud-bigquery-storage: it would add a
+# dependency and require an extra `bigquery.readsessions.create` IAM permission,
+# for a download speed-up that's irrelevant on these small result sets. BigQuery
+# falls back to the REST path (correct, just slower) and emits a cosmetic
+# UserWarning each fetch — silence that one message so CLI output stays clean.
+warnings.filterwarnings(
+    "ignore",
+    message="BigQuery Storage module not found",
+    category=UserWarning,
+)
 
 
 # ---------------------------------------------------------------------------

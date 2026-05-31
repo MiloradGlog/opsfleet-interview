@@ -2,6 +2,10 @@
 
 Ask about sales in plain English; get a written report from read-only SQL.
 
+I decided to cover High-Stakes Oversight and Resilience & Graceful Error Handling for this prototype.
+
+PII Masking, QA and Observability are omitted.
+
 ```mermaid
 flowchart LR
     CLI["Python CLI agent"]
@@ -37,8 +41,9 @@ flowchart TB
 3. Paste your Gemini API key into `.env`: `GOOGLE_API_KEY=...`
 4. Drop the service-account key at `secrets/gcp.json`.
 
+Once setup is done, in the prototype folder run the following:
 ```bash
-docker compose run --rm agent          # builds, starts Postgres, opens the chat CLI
+docker compose run --rm agent
 ```
 
 Type your questions at the `you>` prompt; `exit` to quit. Add `--user <name>` to scope a personal report library (e.g. `docker compose run --rm agent --user alice`).
