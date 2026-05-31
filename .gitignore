@@ -11,11 +11,6 @@ env/
 *.key
 service-account*.json
 
-# Prototype runtime state (generated) — .sqlite plus -shm/-wal WAL sidecars
-prototype/data/*.sqlite*
-prototype/data/embeddings_cache.json
-prototype/data/agent.log
-
 # OS / editor
 .DS_Store
 .idea/

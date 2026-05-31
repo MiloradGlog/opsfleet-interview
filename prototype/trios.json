@@ -1,0 +1,42 @@
+[
+  {
+    "id": "trio-top-products-revenue",
+    "question": "What are our top 5 products by revenue this year?",
+    "sql": "SELECT p.name AS product, ROUND(SUM(oi.sale_price), 2) AS revenue, COUNT(*) AS units_sold FROM `bigquery-public-data.thelook_ecommerce.order_items` oi JOIN `bigquery-public-data.thelook_ecommerce.products` p ON oi.product_id = p.id WHERE oi.status NOT IN ('Cancelled', 'Returned') AND EXTRACT(YEAR FROM oi.created_at) = EXTRACT(YEAR FROM CURRENT_DATE()) GROUP BY p.name ORDER BY revenue DESC LIMIT 5",
+    "report": "The top 5 products by revenue this year are led by clear best-sellers; revenue is concentrated in a small set of items. Cancelled and returned items are excluded so the figures reflect realized sales.",
+    "tags": ["products", "revenue", "ranking"],
+    "status": "active"
+  },
+  {
+    "id": "trio-monthly-revenue-trend",
+    "question": "Show me monthly revenue for the last 12 months.",
+    "sql": "SELECT FORMAT_DATE('%Y-%m', oi.created_at) AS month, ROUND(SUM(oi.sale_price), 2) AS revenue FROM `bigquery-public-data.thelook_ecommerce.order_items` oi WHERE oi.status NOT IN ('Cancelled', 'Returned') AND oi.created_at >= DATE_SUB(CURRENT_DATE(), INTERVAL 12 MONTH) GROUP BY month ORDER BY month LIMIT 12",
+    "report": "Monthly revenue over the trailing 12 months shows the seasonal shape of sales. Use the month-over-month change to spot growth or softening demand.",
+    "tags": ["revenue", "time-series", "trend"],
+    "status": "active"
+  },
+  {
+    "id": "trio-top-customers-spend",
+    "question": "Who are our top 10 customers by total spend?",
+    "sql": "SELECT oi.user_id AS customer_id, ROUND(SUM(oi.sale_price), 2) AS total_spend, COUNT(DISTINCT oi.order_id) AS orders FROM `bigquery-public-data.thelook_ecommerce.order_items` oi WHERE oi.status NOT IN ('Cancelled', 'Returned') GROUP BY oi.user_id ORDER BY total_spend DESC LIMIT 10",
+    "report": "These ten customers contribute the most realized revenue. Customers are identified by internal id only — no personal contact details are shown.",
+    "tags": ["customers", "spend", "ranking"],
+    "status": "active"
+  },
+  {
+    "id": "trio-revenue-by-category",
+    "question": "How does revenue break down by product category?",
+    "sql": "SELECT p.category AS category, ROUND(SUM(oi.sale_price), 2) AS revenue, COUNT(*) AS units_sold FROM `bigquery-public-data.thelook_ecommerce.order_items` oi JOIN `bigquery-public-data.thelook_ecommerce.products` p ON oi.product_id = p.id WHERE oi.status NOT IN ('Cancelled', 'Returned') GROUP BY p.category ORDER BY revenue DESC LIMIT 20",
+    "report": "Revenue by category highlights which departments drive the business. The leading categories account for a disproportionate share of total sales.",
+    "tags": ["products", "category", "revenue"],
+    "status": "active"
+  },
+  {
+    "id": "trio-orders-by-state",
+    "question": "Which states generate the most orders?",
+    "sql": "SELECT u.state AS state, COUNT(DISTINCT o.order_id) AS orders FROM `bigquery-public-data.thelook_ecommerce.orders` o JOIN `bigquery-public-data.thelook_ecommerce.users` u ON o.user_id = u.id WHERE o.status NOT IN ('Cancelled', 'Returned') GROUP BY u.state ORDER BY orders DESC LIMIT 15",
+    "report": "Order volume by customer state shows the geographic concentration of demand, useful for regional comparisons and staffing decisions.",
+    "tags": ["orders", "geography", "region"],
+    "status": "active"
+  }
+]

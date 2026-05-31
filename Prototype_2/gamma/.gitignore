@@ -1,0 +1,16 @@
+# Credentials — never commit.
+secrets/*
+!secrets/.gitkeep
+!secrets/README.md
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+*.egg-info/
+.coverage
